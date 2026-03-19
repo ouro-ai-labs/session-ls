@@ -1,0 +1,32 @@
+{
+  "name": "session-ls",
+  "version": "0.1.0",
+  "description": "Claude Code Session Manager TUI",
+  "type": "module",
+  "bin": {
+    "session-ls": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.tsx",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "claude",
+    "session",
+    "tui"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "fuse.js": "^7.1.0",
+    "ink": "^6.8.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
