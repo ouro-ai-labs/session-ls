@@ -19,6 +19,10 @@
     "session",
     "tui"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ouro-ai-labs/session-ls"
+  },
   "license": "MIT",
   "dependencies": {
     "fuse.js": "^7.1.0",
