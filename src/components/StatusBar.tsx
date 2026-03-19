@@ -16,8 +16,8 @@ export function StatusBar({ filtered, total, view }: StatusBarProps) {
           {view === "list"
             ? "  |  ↑↓ navigate  Enter detail  q quit"
             : view === "detail"
-            ? "  |  Enter conversation  Esc back  q back"
-            : "  |  ↑↓ scroll  Esc back  q back"}
+            ? "  |  Enter conversation  o open Claude  Esc back  q back"
+            : "  |  ↑↓ scroll  o open Claude  Esc back  q back"}
         </Text>
       </Text>
     </Box>

@@ -3,6 +3,7 @@ import { Box, Text, useApp, useInput, useStdout } from "ink";
 import type { AppState, AppAction } from "./types.js";
 import { scanSessions } from "./services/scanner.js";
 import { readConversation } from "./services/conversation.js";
+import { setLaunchRequest } from "./launchClaude.js";
 import { initFuzzy, fuzzySearch } from "./utils/fuzzy.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { SessionList } from "./components/SessionList.js";
@@ -96,6 +97,16 @@ export function App() {
   useInput((input, key) => {
     if (input === "q" && !state.searchQuery && state.view === "list") {
       exit();
+      return;
+    }
+
+    // Open Claude with this session (works in detail and conversation views)
+    if (input === "o" && (state.view === "detail" || state.view === "conversation")) {
+      const session = state.filteredSessions[state.selectedIndex];
+      if (session) {
+        setLaunchRequest({ sessionId: session.id, projectPath: session.projectPath });
+        exit();
+      }
       return;
     }
 

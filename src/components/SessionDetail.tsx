@@ -73,7 +73,7 @@ export function SessionDetail({ session }: SessionDetailProps) {
       )}
 
       <Box marginTop={1}>
-        <Text dimColor>Enter view full conversation | Esc back to list</Text>
+        <Text dimColor>Enter view full conversation | o open in Claude | Esc back to list</Text>
       </Box>
     </Box>
   );
