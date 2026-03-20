@@ -7,6 +7,12 @@ Discovers sessions from `~/.claude/history.jsonl` and project directories, lets 
 ## Install
 
 ```bash
+npm install -g session-ls@latest
+```
+
+### From Source
+
+```bash
 npm install
 npm run build
 npm link
