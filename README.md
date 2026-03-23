@@ -4,6 +4,16 @@ A TUI for browsing and searching Claude Code sessions.
 
 Discovers sessions from `~/.claude/history.jsonl` and project directories, lets you fuzzy search and preview conversations.
 
+## Screenshots
+
+**Session List** — browse all sessions with fuzzy search:
+
+![Session List](assets/session-list.jpg)
+
+**Session Detail** — preview conversation messages:
+
+![Session Detail](assets/session-detail.jpg)
+
 ## Install
 
 ```bash
@@ -34,6 +44,7 @@ session-ls
 |---|---|
 | `↑` / `↓` | Navigate sessions |
 | `Enter` | View session detail |
+| `o` | Open session in Claude Code (detail view) |
 | `Esc` | Back to list / clear search |
 | `q` | Quit (when search is empty) |
 
