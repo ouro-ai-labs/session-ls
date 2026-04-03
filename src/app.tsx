@@ -85,11 +85,33 @@ export function App() {
       initFuzzy(sessions);
       dispatch({ type: "SET_SESSIONS", sessions });
 
-      // Check if index already exists
+      // Check if index already exists; if so, mark ready immediately
       const status = getIndexStatus();
       if (status.exists) {
         dispatch({ type: "SET_INDEX_STATE", indexState: "ready" });
       }
+
+      // Always build/update index in background
+      dispatch({ type: "SET_INDEX_STATE", indexState: status.exists ? "ready" : "indexing", progress: "Scanning..." });
+      buildIndex((progress) => {
+        if (progress.phase === "indexing") {
+          const pct = progress.total > 0
+            ? Math.round((progress.current / progress.total) * 100)
+            : 0;
+          dispatch({
+            type: "SET_INDEX_STATE",
+            indexState: "indexing",
+            progress: `Indexing ${progress.current}/${progress.total} (${pct}%)`,
+          });
+        } else if (progress.phase === "done") {
+          dispatch({ type: "SET_INDEX_STATE", indexState: "ready", progress: "" });
+        }
+      }).catch(() => {
+        // Indexing failed silently — Fuse.js still works
+        if (!status.exists) {
+          dispatch({ type: "SET_INDEX_STATE", indexState: "none", progress: "" });
+        }
+      });
     });
   }, []);
 
@@ -127,40 +149,9 @@ export function App() {
     }, 1000);
   }, []);
 
-  const handleBuildIndex = useCallback(() => {
-    if (state.indexState === "indexing") return;
-
-    dispatch({ type: "SET_INDEX_STATE", indexState: "indexing", progress: "Scanning..." });
-
-    buildIndex((progress) => {
-      if (progress.phase === "scanning") {
-        dispatch({ type: "SET_INDEX_STATE", indexState: "indexing", progress: "Scanning..." });
-      } else if (progress.phase === "indexing") {
-        const pct = progress.total > 0
-          ? Math.round((progress.current / progress.total) * 100)
-          : 0;
-        dispatch({
-          type: "SET_INDEX_STATE",
-          indexState: "indexing",
-          progress: `Indexing ${progress.current}/${progress.total} (${pct}%)`,
-        });
-      } else if (progress.phase === "done") {
-        dispatch({ type: "SET_INDEX_STATE", indexState: "ready", progress: "" });
-      }
-    }).catch(() => {
-      dispatch({ type: "SET_INDEX_STATE", indexState: "none", progress: "Index failed" });
-    });
-  }, [state.indexState]);
-
   useInput((input, key) => {
     if (input === "q" && !state.searchQuery && state.view === "list") {
       exit();
-      return;
-    }
-
-    // Build index with Shift+I (works in list view when not typing in search)
-    if (input === "I" && state.view === "list" && !state.searchQuery) {
-      handleBuildIndex();
       return;
     }
 

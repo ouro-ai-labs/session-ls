@@ -16,8 +16,6 @@ export function StatusBar({ filtered, total, view, indexState, indexProgress }: 
     indexLabel = `  [${indexProgress || "Indexing..."}]`;
   } else if (indexState === "ready") {
     indexLabel = "  [FTS]";
-  } else if (indexState === "none" && view === "list") {
-    indexLabel = "  [I: build full-text search index]";
   }
 
   return (
