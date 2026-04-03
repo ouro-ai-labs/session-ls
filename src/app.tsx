@@ -1,10 +1,12 @@
 import React, { useEffect, useReducer, useCallback, useRef } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
-import type { AppState, AppAction } from "./types.js";
+import type { AppState, AppAction, SearchResultMeta } from "./types.js";
 import { scanSessions } from "./services/scanner.js";
 import { readConversation } from "./services/conversation.js";
 import { setLaunchRequest } from "./launchClaude.js";
 import { initFuzzy, fuzzySearch } from "./utils/fuzzy.js";
+import { getIndexStatus, buildIndex } from "./services/indexer.js";
+import { unifiedSearch } from "./services/search.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { SessionList } from "./components/SessionList.js";
 import { SessionDetail } from "./components/SessionDetail.js";
@@ -22,6 +24,9 @@ const initialState: AppState = {
   conversation: [],
   conversationLoading: false,
   detailScrollOffset: 0,
+  indexState: "none",
+  indexProgress: "",
+  searchMeta: new Map(),
 };
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -39,6 +44,7 @@ function reducer(state: AppState, action: AppAction): AppState {
         filteredSessions: action.sessions,
         selectedIndex: 0,
         scrollOffset: 0,
+        searchMeta: action.searchMeta ?? new Map(),
       };
     case "SET_LOADING":
       return { ...state, loading: action.loading };
@@ -56,6 +62,12 @@ function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, conversationLoading: action.loading, conversation: [], detailScrollOffset: 0 };
     case "SET_DETAIL_SCROLL":
       return { ...state, detailScrollOffset: action.offset };
+    case "SET_INDEX_STATE":
+      return {
+        ...state,
+        indexState: action.indexState,
+        indexProgress: action.progress ?? state.indexProgress,
+      };
     default:
       return state;
   }
@@ -72,12 +84,20 @@ export function App() {
     scanSessions().then((sessions) => {
       initFuzzy(sessions);
       dispatch({ type: "SET_SESSIONS", sessions });
+
+      // Check if index already exists
+      const status = getIndexStatus();
+      if (status.exists) {
+        dispatch({ type: "SET_INDEX_STATE", indexState: "ready" });
+      }
     });
   }, []);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sessionsRef = useRef(state.sessions);
   sessionsRef.current = state.sessions;
+  const indexStateRef = useRef(state.indexState);
+  indexStateRef.current = state.indexState;
 
   const handleSearch = useCallback((query: string) => {
     dispatch({ type: "SET_SEARCH", query });
@@ -87,16 +107,60 @@ export function App() {
     debounceRef.current = setTimeout(() => {
       if (!query.trim()) {
         dispatch({ type: "SET_FILTERED", sessions: sessionsRef.current });
+      } else if (indexStateRef.current === "ready") {
+        // Use unified search (Fuse + FTS5)
+        const results = unifiedSearch(query, sessionsRef.current);
+        const meta = new Map<string, SearchResultMeta>();
+        for (const r of results) {
+          meta.set(r.session.id, { source: r.source, snippet: r.snippet });
+        }
+        dispatch({
+          type: "SET_FILTERED",
+          sessions: results.map((r) => r.session),
+          searchMeta: meta,
+        });
       } else {
+        // Fallback to Fuse.js only
         const results = fuzzySearch(query);
         dispatch({ type: "SET_FILTERED", sessions: results });
       }
     }, 1000);
   }, []);
 
+  const handleBuildIndex = useCallback(() => {
+    if (state.indexState === "indexing") return;
+
+    dispatch({ type: "SET_INDEX_STATE", indexState: "indexing", progress: "Scanning..." });
+
+    buildIndex((progress) => {
+      if (progress.phase === "scanning") {
+        dispatch({ type: "SET_INDEX_STATE", indexState: "indexing", progress: "Scanning..." });
+      } else if (progress.phase === "indexing") {
+        const pct = progress.total > 0
+          ? Math.round((progress.current / progress.total) * 100)
+          : 0;
+        dispatch({
+          type: "SET_INDEX_STATE",
+          indexState: "indexing",
+          progress: `Indexing ${progress.current}/${progress.total} (${pct}%)`,
+        });
+      } else if (progress.phase === "done") {
+        dispatch({ type: "SET_INDEX_STATE", indexState: "ready", progress: "" });
+      }
+    }).catch(() => {
+      dispatch({ type: "SET_INDEX_STATE", indexState: "none", progress: "Index failed" });
+    });
+  }, [state.indexState]);
+
   useInput((input, key) => {
     if (input === "q" && !state.searchQuery && state.view === "list") {
       exit();
+      return;
+    }
+
+    // Build index with Shift+I (works in list view when not typing in search)
+    if (input === "I" && state.view === "list" && !state.searchQuery) {
+      handleBuildIndex();
       return;
     }
 
@@ -201,13 +265,22 @@ export function App() {
       dispatch({ type: "SET_VIEW", view: "list" });
       return null;
     }
+    const meta = state.searchMeta.get(session.id);
     return (
       <Box flexDirection="column">
         <SessionDetail session={session} />
+        {meta?.snippet && (
+          <Box paddingX={1}>
+            <Text dimColor>Match: </Text>
+            <Text color="yellow">{meta.snippet}</Text>
+          </Box>
+        )}
         <StatusBar
           filtered={state.filteredSessions.length}
           total={state.sessions.length}
           view="detail"
+          indexState={state.indexState}
+          indexProgress={state.indexProgress}
         />
       </Box>
     );
@@ -225,11 +298,14 @@ export function App() {
         selectedIndex={state.selectedIndex}
         scrollOffset={state.scrollOffset}
         visibleRows={visibleRows}
+        searchMeta={state.searchMeta}
       />
       <StatusBar
         filtered={state.filteredSessions.length}
         total={state.sessions.length}
         view="list"
+        indexState={state.indexState}
+        indexProgress={state.indexProgress}
       />
     </Box>
   );

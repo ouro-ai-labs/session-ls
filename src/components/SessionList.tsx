@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { Session } from "../types.js";
+import type { Session, SearchResultMeta } from "../types.js";
 import { truncateId, formatDate, truncateMessage } from "../utils/format.js";
 
 interface SessionListProps {
@@ -8,6 +8,7 @@ interface SessionListProps {
   selectedIndex: number;
   scrollOffset: number;
   visibleRows: number;
+  searchMeta?: Map<string, SearchResultMeta>;
 }
 
 export function SessionList({
@@ -15,6 +16,7 @@ export function SessionList({
   selectedIndex,
   scrollOffset,
   visibleRows,
+  searchMeta,
 }: SessionListProps) {
   if (sessions.length === 0) {
     return (
@@ -41,8 +43,12 @@ export function SessionList({
       {visible.map((session, i) => {
         const absoluteIndex = scrollOffset + i;
         const isSelected = absoluteIndex === selectedIndex;
+        const meta = searchMeta?.get(session.id);
+        const sourceTag = meta?.source === "content" ? " [content]"
+          : meta?.source === "both" ? " [meta+content]"
+          : "";
         return (
-          <Box key={session.id}>
+          <Box key={session.id} flexDirection="column">
             <Text
               backgroundColor={isSelected ? "blue" : undefined}
               color={isSelected ? "white" : undefined}
@@ -59,7 +65,17 @@ export function SessionList({
               <Text dimColor={!isSelected}>
                 {truncateMessage(session.displayMessages[0] || session.slug || "-", 50)}
               </Text>
+              {sourceTag && (
+                <Text color={isSelected ? "white" : "cyan"}>{sourceTag}</Text>
+              )}
             </Text>
+            {isSelected && meta?.snippet && (
+              <Box paddingLeft={4}>
+                <Text color="yellow" dimColor>
+                  {"  ↳ "}{truncateMessage(meta.snippet.replace(/>>>/g, "").replace(/<<</g, ""), 80)}
+                </Text>
+              </Box>
+            )}
           </Box>
         );
       })}
