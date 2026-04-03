@@ -277,11 +277,11 @@ export function searchIndex(query: string, limit = 50): FtsSearchResult[] {
     }
 
     // Use FTS5 with snippet() for highlighted results
-    const results = db.prepare(`
+    const rows = db.prepare(`
       SELECT
-        session_id,
+        session_id AS sessionId,
         role,
-        snippet(messages_fts, 2, '>>>', '<<<', '...', 48) as snippet
+        snippet(messages_fts, 2, '>>>', '<<<', '...', 48) AS snippet
       FROM messages_fts
       WHERE messages_fts MATCH ?
       ORDER BY rank
@@ -290,9 +290,9 @@ export function searchIndex(query: string, limit = 50): FtsSearchResult[] {
 
     db.close();
 
-    // Deduplicate by session_id, keeping the best-ranked match
+    // Deduplicate by sessionId, keeping the best-ranked match
     const seen = new Map<string, FtsSearchResult>();
-    for (const r of results) {
+    for (const r of rows) {
       if (!seen.has(r.sessionId)) {
         seen.set(r.sessionId, r);
       }
