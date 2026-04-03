@@ -18,6 +18,7 @@ function reducer(state: AppState, action: AppAction): AppState {
         filteredSessions: action.sessions,
         selectedIndex: 0,
         scrollOffset: 0,
+        searchMeta: action.searchMeta ?? new Map(),
       };
     case "SET_LOADING":
       return { ...state, loading: action.loading };
@@ -35,6 +36,12 @@ function reducer(state: AppState, action: AppAction): AppState {
       return { ...state, conversationLoading: action.loading, conversation: [], detailScrollOffset: 0 };
     case "SET_DETAIL_SCROLL":
       return { ...state, detailScrollOffset: action.offset };
+    case "SET_INDEX_STATE":
+      return {
+        ...state,
+        indexState: action.indexState,
+        indexProgress: action.progress ?? state.indexProgress,
+      };
     default:
       return state;
   }
@@ -51,6 +58,9 @@ const initialState: AppState = {
   conversation: [],
   conversationLoading: false,
   detailScrollOffset: 0,
+  indexState: "none",
+  indexProgress: "",
+  searchMeta: new Map(),
 };
 
 function makeSession(id: string): Session {

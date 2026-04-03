@@ -25,6 +25,13 @@ export interface ConversationMessage {
 
 export type AppView = "list" | "detail" | "conversation";
 
+export type IndexState = "none" | "indexing" | "ready";
+
+export interface SearchResultMeta {
+  source: "metadata" | "content" | "both";
+  snippet?: string;
+}
+
 export interface AppState {
   sessions: Session[];
   filteredSessions: Session[];
@@ -36,11 +43,15 @@ export interface AppState {
   conversation: ConversationMessage[];
   conversationLoading: boolean;
   detailScrollOffset: number;
+  indexState: IndexState;
+  indexProgress: string;
+  /** Maps session ID to search result metadata (source, snippet) */
+  searchMeta: Map<string, SearchResultMeta>;
 }
 
 export type AppAction =
   | { type: "SET_SESSIONS"; sessions: Session[] }
-  | { type: "SET_FILTERED"; sessions: Session[] }
+  | { type: "SET_FILTERED"; sessions: Session[]; searchMeta?: Map<string, SearchResultMeta> }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_SEARCH"; query: string }
   | { type: "SET_SELECTED"; index: number }
@@ -48,4 +59,5 @@ export type AppAction =
   | { type: "SET_SCROLL_OFFSET"; offset: number }
   | { type: "SET_CONVERSATION"; messages: ConversationMessage[] }
   | { type: "SET_CONVERSATION_LOADING"; loading: boolean }
-  | { type: "SET_DETAIL_SCROLL"; offset: number };
+  | { type: "SET_DETAIL_SCROLL"; offset: number }
+  | { type: "SET_INDEX_STATE"; indexState: IndexState; progress?: string };
